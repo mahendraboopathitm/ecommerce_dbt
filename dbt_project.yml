@@ -1,0 +1,44 @@
+# dbt_project.yml
+name: 'ecommerce_analytics'
+version: '1.0.0'
+config-version: 2
+
+profile: 'ecommerce_analytics'
+
+model-paths:   ["models"]
+analysis-paths: ["analyses"]
+test-paths:    ["tests"]
+seed-paths:    ["seeds"]
+macro-paths:   ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path:   "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  ecommerce_analytics:
+
+    staging:
+      +materialized: view          # staging = views (lightweight)
+      +schema: silver              # writes to ecommerce.silver
+      +tags: ["staging"]
+
+    intermediate:
+      +materialized: ephemeral     # not persisted, inlined into downstream
+      +tags: ["intermediate"]
+
+    marts:
+      +materialized: table         # gold = physical Delta tables
+      +schema: gold                # writes to ecommerce.gold
+      +tags: ["marts"]
+      fct_orders:
+        +materialized: incremental # large fact tables = incremental
+        +incremental_strategy: merge
+        +unique_key: order_id
+      fct_order_items:
+        +materialized: incremental
+        +incremental_strategy: merge
+        +unique_key: order_item_id
+
+vars:
+  start_date: '2026-05-13'
