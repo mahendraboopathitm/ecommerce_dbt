@@ -1,0 +1,57 @@
+# models/marts/_marts.yml
+version: 2
+
+models:
+  - name: fct_orders
+    description: "Core order fact table — one row per order"
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_id
+      - name: order_total
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+      - name: order_status
+        tests:
+          - accepted_values:
+              values: ['pending','confirmed','shipped','delivered','cancelled','returned']
+      - name: order_date
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= '2020-01-01'"
+
+  - name: dim_customers
+    description: "Customer dimension with lifetime metrics"
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+      - name: email
+        tests: [unique, not_null]
+      - name: value_segment
+        tests:
+          - accepted_values:
+              values: ['vip','high_value','mid_value','low_value','no_purchase']
+      - name: total_orders
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+  - name: dim_products
+    description: "Product dimension with sales metrics"
+    columns:
+      - name: product_id
+        tests: [unique, not_null]
+      - name: margin_pct
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "between 0 and 100"
+      - name: sales_tier
+        tests:
+          - accepted_values:
+              values: ['top_seller','good_seller','slow_mover','no_sales']

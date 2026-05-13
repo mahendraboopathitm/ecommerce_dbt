@@ -1,0 +1,78 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: "Raw ingested data from the e-commerce platform"
+    catalog: ecommerce
+    schema: bronze
+    tags: ["bronze", "raw"]
+
+    tables:
+      - name: customers_raw
+        description: "Raw customer registrations"
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        columns:
+          - name: customer_id
+            description: "UUID primary key"
+            tests:
+              - unique
+              - not_null
+          - name: email
+            tests:
+              - unique
+              - not_null
+
+      - name: orders_raw
+        description: "Raw order transactions"
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after:  {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
+        columns:
+          - name: order_id
+            tests: [unique, not_null]
+          - name: customer_id
+            tests: [not_null]
+          - name: order_status
+            tests:
+              - accepted_values:
+                  values: ['pending','confirmed','shipped','delivered','cancelled','returned']
+
+      - name: order_items_raw
+        description: "Line items for each order"
+        columns:
+          - name: order_item_id
+            tests: [unique, not_null]
+          - name: order_id
+            tests: [not_null]
+          - name: product_id
+            tests: [not_null]
+          - name: quantity
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 1"
+
+      - name: products_raw
+        description: "Product catalog"
+        columns:
+          - name: product_id
+            tests: [unique, not_null]
+          - name: unit_price
+            tests:
+              - dbt_utils.expression_is_true:
+                  expression: "> 0"
+
+      - name: payments_raw
+        description: "Payment records"
+        columns:
+          - name: payment_id
+            tests: [unique, not_null]
+          - name: order_id
+            tests: [not_null]
+          - name: payment_status
+            tests:
+              - accepted_values:
+                  values: ['success', 'failed', 'refunded', 'pending']
